@@ -3,6 +3,7 @@ from pathlib import Path
 from app.loaders.base import BaseLoader
 from app.loaders.csv_loader import CSVLoader
 from app.loaders.excel_loader import ExcelLoader
+from app.loaders.json_loader import JSONLoader
 
 
 class LoaderFactory:
@@ -14,6 +15,7 @@ class LoaderFactory:
         ".csv": CSVLoader,
         ".xlsx": ExcelLoader,
         ".xls": ExcelLoader,
+        ".json": JSONLoader,
     }
 
     @classmethod

@@ -1,0 +1,62 @@
+[
+    {
+        "customer_id": 101,
+        "name": "Alice",
+        "email": "alice@example.com",
+        "age": 31
+    },
+    {
+        "customer_id": 102,
+        "name": "Bob",
+        "email": "bob@example.com",
+        "age": 27
+    },
+    {
+        "customer_id": 103,
+        "name": "Charlie",
+        "email": "charlie@example.com",
+        "age": 45
+    },
+    {
+        "customer_id": 104,
+        "name": "David",
+        "email": "david@example.com",
+        "age": 38
+    },
+    {
+        "customer_id": 105,
+        "name": "Emma",
+        "email": "emma@example.com",
+        "age": 29
+    },
+    {
+        "customer_id": 106,
+        "name": "Frank",
+        "email": "frank@example.com",
+        "age": 42
+    },
+    {
+        "customer_id": 107,
+        "name": "Grace",
+        "email": "grace@example.com",
+        "age": 35
+    },
+    {
+        "customer_id": 108,
+        "name": "Henry",
+        "email": "henry@example.com",
+        "age": 51
+    },
+    {
+        "customer_id": 109,
+        "name": "Ivy",
+        "email": "ivy@example.com",
+        "age": 26
+    },
+    {
+        "customer_id": 110,
+        "name": "Jack",
+        "email": "jack@example.com",
+        "age": 33
+    }
+]

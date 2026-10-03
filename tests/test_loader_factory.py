@@ -1,6 +1,7 @@
 from app.loaders.csv_loader import CSVLoader
 from app.loaders.excel_loader import ExcelLoader
 from app.loaders.loader_factory import LoaderFactory
+from app.loaders.json_loader import JSONLoader
 
 
 def test_csv_loader_factory():
@@ -19,6 +20,14 @@ def test_excel_loader_factory():
     )
 
     assert isinstance(loader, ExcelLoader)
+
+def test_json_loader_factory():
+
+    loader = LoaderFactory.get_loader(
+        "sample.json"
+    )
+
+    assert isinstance(loader, JSONLoader)
 
 
 def test_unsupported_file_type():
