@@ -1,49 +1,34 @@
-from app.config.settings import settings
-
-
-def main() -> None:
-    print("=" * 50)
-    print(settings.app_name)
-    print(f"Environment: {settings.environment}")
-    print("Python engine initialized successfully")
-    print("=" * 50)
-
-
-if __name__ == "__main__":
-    main()
-
 import sys
 
+
 from app.config.settings import settings
-from app.loaders.csv_loader import CSVLoader
+from app.loaders.loader_factory import LoaderFactory
 from app.pipeline.ingestion_pipeline import IngestionPipeline
 
 
 def main() -> None:
     print("=" * 60)
-    print(settings.app_name)
+    print("Standard Data Pipeline")
     print("=" * 60)
 
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python -m app.main <csv_file_path>")
+        print("  python -m app.main <file_path>")
         return
 
-    csv_file = sys.argv[1]
+    input_file = sys.argv[1]
 
-    print(f"Input file: {csv_file}")
+    print(f"Input file: {input_file}")
 
-    loader = CSVLoader()
+    # Automatically select the correct loader
+    loader = LoaderFactory.get_loader(input_file)
 
-    documents = loader.load(csv_file)
+    # Load the input file
+    documents = loader.load(input_file)
 
-    pipeline = IngestionPipeline()
+    print(f"Documents loaded: {len(documents)}")
 
-    result = pipeline.run(documents)
-
-    print(f"Records loaded: {len(result)}")
-
-    for document in result[:3]:
+    for document in documents[:3]:
         print("-" * 60)
         print(f"ID: {document.id}")
         print(f"Source: {document.source}")
