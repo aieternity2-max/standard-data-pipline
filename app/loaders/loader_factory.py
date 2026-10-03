@@ -4,11 +4,12 @@ from app.loaders.base import BaseLoader
 from app.loaders.csv_loader import CSVLoader
 from app.loaders.excel_loader import ExcelLoader
 from app.loaders.json_loader import JSONLoader
+from app.loaders.api_loader import APILoader
 
 
 class LoaderFactory:
     """
-    Select the appropriate loader based on file extension.
+    Select the appropriate loader based on source type.
     """
 
     _loaders = {
@@ -22,7 +23,7 @@ class LoaderFactory:
     @classmethod
     def get_loader(cls, source: str | Path) -> BaseLoader:
         """
-        Return the appropriate loader for the source file.
+        Return the appropriate loader for a file source.
         """
 
         file_path = Path(source)
@@ -37,3 +38,11 @@ class LoaderFactory:
             )
 
         return loader_class()
+
+    @classmethod
+    def get_api_loader(cls) -> APILoader:
+        """
+        Return the API loader.
+        """
+
+        return APILoader()

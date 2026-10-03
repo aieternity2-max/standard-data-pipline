@@ -1,0 +1,7 @@
+Customer Data Report
+
+Customer 101: Alice
+Customer 102: Bob
+Customer 103: Charlie
+
+All customers have completed their registration.
