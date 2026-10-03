@@ -16,6 +16,7 @@ class LoaderFactory:
         ".xlsx": ExcelLoader,
         ".xls": ExcelLoader,
         ".json": JSONLoader,
+        ".jsonl": JSONLoader,
     }
 
     @classmethod
