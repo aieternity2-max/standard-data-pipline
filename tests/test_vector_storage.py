@@ -1,28 +1,106 @@
 from app.models.document import Document
-from app.storage.vector_storage import VectorStorage
+
+from app.storage.vector_storage import (
+    VectorStorage,
+)
+
+def test_vector_storage_search():
+
+    storage = VectorStorage(
+        collection_name="test_search"
+    )
+
+    documents = [
+        Document(
+            id="doc-search-1",
+            source="sample.txt",
+            source_type="txt",
+            content="Python is a programming language",
+            metadata={},
+        ),
+        Document(
+            id="doc-search-2",
+            source="sample.txt",
+            source_type="txt",
+            content="MySQL is a relational database",
+            metadata={},
+        ),
+    ]
+
+    # -----------------------------------------
+    # Save documents
+    # -----------------------------------------
+
+    saved_count = storage.save(
+        documents
+    )
+
+    assert saved_count == 2
+
+    # -----------------------------------------
+    # Search documents
+    # -----------------------------------------
+
+    results = storage.search(
+        query="programming language",
+        n_results=1,
+    )
+
+    # -----------------------------------------
+    # Verify search result
+    # -----------------------------------------
+
+    assert results is not None
+
+    assert "ids" in results
+
+    assert len(results["ids"]) > 0
+
+    assert (
+        results["ids"][0][0]
+        == "doc-search-1"
+    )
 
 
 def test_vector_storage():
 
     documents = [
         Document(
-            id="doc-1",
+            id="vector-doc-1",
             source="sample.txt",
             source_type="txt",
-            content="Hello",
+            content="Hello world",
             metadata={},
         ),
         Document(
-            id="doc-2",
+            id="vector-doc-2",
             source="sample.txt",
             source_type="txt",
-            content="World",
+            content="This is a test document",
             metadata={},
         ),
     ]
 
-    storage = VectorStorage()
+    storage = VectorStorage(
+        collection_name="test_documents"
+    )
 
-    result = storage.save(documents)
+    saved_count = storage.save(
+        documents
+    )
 
-    assert result == 2
+    assert saved_count == 2
+
+    assert storage.count() == 2
+
+    results = storage.search(
+        "Hello world",
+        n_results=1,
+    )
+
+    assert len(results["documents"]) == 1
+
+    assert (
+        results["documents"][0][0]
+        == "Hello world"
+    )

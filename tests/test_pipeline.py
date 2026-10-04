@@ -31,17 +31,37 @@ def test_ingestion_pipeline_validation_and_processing():
 
     pipeline = IngestionPipeline()
 
+    # -----------------------------------------
+    # Mock storage components
+    # -----------------------------------------
+
+    sql_saved = []
+
+    vector_saved = []
+
+    def mock_sql_save(documents):
+        sql_saved.extend(documents)
+        return len(documents)
+
+    def mock_vector_save(documents):
+        vector_saved.extend(documents)
+        return len(documents)
+
+    pipeline.sql_storage.save = mock_sql_save
+
+    pipeline.vector_storage.save = mock_vector_save
+
+    # -----------------------------------------
+    # Run pipeline
+    # -----------------------------------------
+
     result = pipeline.run(documents)
 
     # -----------------------------------------
-    # Pipeline should return processed documents
+    # Processed documents
     # -----------------------------------------
 
     assert len(result) == 2
-
-    # -----------------------------------------
-    # Processed documents should be chunks
-    # -----------------------------------------
 
     assert result[0].id == "customer-1-chunk-1"
     assert result[1].id == "customer-2-chunk-1"
@@ -50,7 +70,7 @@ def test_ingestion_pipeline_validation_and_processing():
     assert result[1].content == "Bob"
 
     # -----------------------------------------
-    # Chunk metadata should exist
+    # Chunk metadata
     # -----------------------------------------
 
     assert (
@@ -64,7 +84,7 @@ def test_ingestion_pipeline_validation_and_processing():
     )
 
     # -----------------------------------------
-    # Quality summary should be generated
+    # Quality summary
     # -----------------------------------------
 
     assert (
@@ -101,7 +121,7 @@ def test_ingestion_pipeline_validation_and_processing():
     ) == 0
 
     # -----------------------------------------
-    # Processed documents should be stored
+    # Processed documents stored in pipeline
     # -----------------------------------------
 
     assert (
@@ -110,8 +130,9 @@ def test_ingestion_pipeline_validation_and_processing():
         )
         == 2
     )
+
     # -----------------------------------------
-    # SQL storage should process documents
+    # SQL storage verification
     # -----------------------------------------
 
     assert (
@@ -119,11 +140,35 @@ def test_ingestion_pipeline_validation_and_processing():
         == 2
     )
 
+    assert len(sql_saved) == 2
+
+    assert (
+        sql_saved[0].id
+        == "customer-1-chunk-1"
+    )
+
+    assert (
+        sql_saved[1].id
+        == "customer-2-chunk-1"
+    )
+
     # -----------------------------------------
-    # Vector storage should process documents
+    # Vector storage verification
     # -----------------------------------------
 
     assert (
         pipeline.last_vector_storage_count
         == 2
+    )
+
+    assert len(vector_saved) == 2
+
+    assert (
+        vector_saved[0].id
+        == "customer-1-chunk-1"
+    )
+
+    assert (
+        vector_saved[1].id
+        == "customer-2-chunk-1"
     )

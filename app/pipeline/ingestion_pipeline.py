@@ -1,10 +1,14 @@
-from app.models.document import Document
-
 from app.logging.logger import get_logger
 
 from app.processors.parser import DocumentParser
 from app.processors.cleaner import DocumentCleaner
 from app.processors.chunker import DocumentChunker
+
+from app.storage.sql_storage import SQLStorage
+from app.storage.vector_storage import VectorStorage
+
+from app.models.document import Document
+
 
 from app.validation.document_validator import (
     DocumentValidator,
@@ -13,9 +17,6 @@ from app.validation.document_validator import (
 from app.validation.quality_summary import (
     QualitySummaryGenerator,
 )
-
-from app.storage.sql_storage import SQLStorage
-from app.storage.vector_storage import VectorStorage
 
 
 class IngestionPipeline:

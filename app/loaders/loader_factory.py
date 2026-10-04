@@ -7,6 +7,7 @@ from app.loaders.json_loader import JSONLoader
 from app.loaders.api_loader import APILoader
 from app.loaders.pdf_loader import PDFLoader
 from app.loaders.docx_loader import DOCXLoader
+from app.loaders.txt_loader import TXTLoader
 
 
 class LoaderFactory:
@@ -15,17 +16,24 @@ class LoaderFactory:
     """
 
     _loaders = {
+        # Structured files
         ".csv": CSVLoader,
         ".xlsx": ExcelLoader,
         ".xls": ExcelLoader,
         ".json": JSONLoader,
         ".jsonl": JSONLoader,
+
+        # Unstructured files
+        ".txt": TXTLoader,
         ".pdf": PDFLoader,
         ".docx": DOCXLoader,
     }
 
     @classmethod
-    def get_loader(cls, source: str | Path) -> BaseLoader:
+    def get_loader(
+        cls,
+        source: str | Path,
+    ) -> BaseLoader:
         """
         Return the appropriate loader for a file source.
         """
@@ -34,7 +42,9 @@ class LoaderFactory:
 
         extension = file_path.suffix.lower()
 
-        loader_class = cls._loaders.get(extension)
+        loader_class = cls._loaders.get(
+            extension
+        )
 
         if loader_class is None:
             raise ValueError(
@@ -44,10 +54,11 @@ class LoaderFactory:
         return loader_class()
 
     @classmethod
-    def get_api_loader(cls) -> APILoader:
+    def get_api_loader(
+        cls,
+    ) -> APILoader:
         """
         Return the API loader.
         """
 
         return APILoader()
-    
