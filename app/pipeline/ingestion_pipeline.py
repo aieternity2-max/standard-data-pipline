@@ -2,6 +2,10 @@ from app.models.document import Document
 
 from app.logging.logger import get_logger
 
+from app.processors.parser import DocumentParser
+from app.processors.cleaner import DocumentCleaner
+from app.processors.chunker import DocumentChunker
+
 from app.validation.document_validator import (
     DocumentValidator,
 )
@@ -21,15 +25,29 @@ class IngestionPipeline:
         ↓
     Document Validation
         ↓
-    Quality Summary
-        ↓
     Valid Documents
+        ↓
+    Parser
+        ↓
+    Cleaner
+        ↓
+    Chunker
+        ↓
+    Processed Documents
     """
 
     def __init__(self):
+        # -----------------------------------------
+        # Logger
+        # -----------------------------------------
+
         self.logger = get_logger(
             "ingestion_pipeline"
         )
+
+        # -----------------------------------------
+        # Validation components
+        # -----------------------------------------
 
         self.document_validator = (
             DocumentValidator()
@@ -39,8 +57,25 @@ class IngestionPipeline:
             QualitySummaryGenerator()
         )
 
+        # -----------------------------------------
+        # Processing components
+        # -----------------------------------------
+
+        self.parser = DocumentParser()
+
+        self.cleaner = DocumentCleaner()
+
+        self.chunker = DocumentChunker()
+
+        # -----------------------------------------
+        # Pipeline state
+        # -----------------------------------------
+
         self.last_quality_summary = None
+
         self.last_invalid_documents = []
+
+        self.last_processed_documents = []
 
     def run(
         self,
@@ -49,7 +84,7 @@ class IngestionPipeline:
         """
         Validate and process ingested documents.
 
-        Returns only valid documents.
+        Returns processed document chunks.
         """
 
         # -----------------------------------------
@@ -175,7 +210,82 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 9. Pipeline completed
+        # 9. Process valid documents
+        # -----------------------------------------
+
+        self.logger.info(
+            "Document processing started"
+        )
+
+        processed_documents = []
+
+        for document in valid_documents:
+
+            # -------------------------------------
+            # Parse
+            # -------------------------------------
+
+            parsed_content = (
+                self.parser.parse(
+                    document
+                )
+            )
+
+            # -------------------------------------
+            # Clean
+            # -------------------------------------
+
+            cleaned_content = (
+                self.cleaner.clean(
+                    parsed_content
+                )
+            )
+
+            # -------------------------------------
+            # Create cleaned document
+            # -------------------------------------
+
+            cleaned_document = Document(
+                id=document.id,
+                source=document.source,
+                source_type=document.source_type,
+                content=cleaned_content,
+                metadata=dict(
+                    document.metadata or {}
+                ),
+            )
+
+            # -------------------------------------
+            # Chunk
+            # -------------------------------------
+
+            chunks = self.chunker.chunk(
+                cleaned_document
+            )
+
+            processed_documents.extend(
+                chunks
+            )
+
+        # -----------------------------------------
+        # 10. Store processed documents
+        # -----------------------------------------
+
+        self.last_processed_documents = (
+            processed_documents
+        )
+
+        self.logger.info(
+            "Document processing completed"
+        )
+
+        self.logger.info(
+            "Processed documents: %d",
+            len(processed_documents),
+        )
+
+        # -----------------------------------------
+        # 11. Pipeline completed
         # -----------------------------------------
 
         self.logger.info(
@@ -183,7 +293,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 10. Return valid documents
+        # 12. Return processed documents
         # -----------------------------------------
 
-        return valid_documents
+        return processed_documents
