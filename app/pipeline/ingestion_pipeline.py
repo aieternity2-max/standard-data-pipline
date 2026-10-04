@@ -14,6 +14,9 @@ from app.validation.quality_summary import (
     QualitySummaryGenerator,
 )
 
+from app.storage.sql_storage import SQLStorage
+from app.storage.vector_storage import VectorStorage
+
 
 class IngestionPipeline:
     """
@@ -34,9 +37,14 @@ class IngestionPipeline:
     Chunker
         ↓
     Processed Documents
+        ↓
+    SQL Storage
+        ↓
+    Vector Storage
     """
 
     def __init__(self):
+
         # -----------------------------------------
         # Logger
         # -----------------------------------------
@@ -68,6 +76,14 @@ class IngestionPipeline:
         self.chunker = DocumentChunker()
 
         # -----------------------------------------
+        # Storage components
+        # -----------------------------------------
+
+        self.sql_storage = SQLStorage()
+
+        self.vector_storage = VectorStorage()
+
+        # -----------------------------------------
         # Pipeline state
         # -----------------------------------------
 
@@ -77,12 +93,17 @@ class IngestionPipeline:
 
         self.last_processed_documents = []
 
+        self.last_sql_storage_count = 0
+
+        self.last_vector_storage_count = 0
+
     def run(
         self,
         documents: list[Document],
     ) -> list[Document]:
         """
-        Validate and process ingested documents.
+        Validate, process and prepare documents
+        for storage.
 
         Returns processed document chunks.
         """
@@ -285,7 +306,45 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 11. Pipeline completed
+        # 11. SQL Storage
+        # -----------------------------------------
+
+        self.logger.info(
+            "SQL storage processing started"
+        )
+
+        self.last_sql_storage_count = (
+            self.sql_storage.save(
+                processed_documents
+            )
+        )
+
+        self.logger.info(
+            "SQL storage processed %d document(s)",
+            self.last_sql_storage_count,
+        )
+
+        # -----------------------------------------
+        # 12. Vector Storage
+        # -----------------------------------------
+
+        self.logger.info(
+            "Vector storage processing started"
+        )
+
+        self.last_vector_storage_count = (
+            self.vector_storage.save(
+                processed_documents
+            )
+        )
+
+        self.logger.info(
+            "Vector storage processed %d document(s)",
+            self.last_vector_storage_count,
+        )
+
+        # -----------------------------------------
+        # 13. Pipeline completed
         # -----------------------------------------
 
         self.logger.info(
@@ -293,7 +352,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 12. Return processed documents
+        # 14. Return processed documents
         # -----------------------------------------
 
         return processed_documents

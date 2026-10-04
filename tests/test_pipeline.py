@@ -110,3 +110,20 @@ def test_ingestion_pipeline_validation_and_processing():
         )
         == 2
     )
+    # -----------------------------------------
+    # SQL storage should process documents
+    # -----------------------------------------
+
+    assert (
+        pipeline.last_sql_storage_count
+        == 2
+    )
+
+    # -----------------------------------------
+    # Vector storage should process documents
+    # -----------------------------------------
+
+    assert (
+        pipeline.last_vector_storage_count
+        == 2
+    )
