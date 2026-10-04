@@ -3,6 +3,7 @@ from app.loaders.excel_loader import ExcelLoader
 from app.loaders.loader_factory import LoaderFactory
 from app.loaders.json_loader import JSONLoader
 from app.loaders.json_loader import JSONLoader
+import pytest
 
 def test_csv_loader_factory():
 
@@ -44,3 +45,12 @@ def test_unsupported_file_type():
         assert False
     except ValueError as exc:
         assert "Unsupported file type" in str(exc)
+
+
+def test_unsupported_file_type():
+
+    with pytest.raises(ValueError):
+
+        LoaderFactory.get_loader(
+            "sample.xyz"
+        )

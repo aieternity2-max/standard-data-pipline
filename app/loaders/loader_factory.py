@@ -5,6 +5,8 @@ from app.loaders.csv_loader import CSVLoader
 from app.loaders.excel_loader import ExcelLoader
 from app.loaders.json_loader import JSONLoader
 from app.loaders.api_loader import APILoader
+from app.loaders.pdf_loader import PDFLoader
+from app.loaders.docx_loader import DOCXLoader
 
 
 class LoaderFactory:
@@ -18,6 +20,8 @@ class LoaderFactory:
         ".xls": ExcelLoader,
         ".json": JSONLoader,
         ".jsonl": JSONLoader,
+        ".pdf": PDFLoader,
+        ".docx": DOCXLoader,
     }
 
     @classmethod
@@ -46,3 +50,4 @@ class LoaderFactory:
         """
 
         return APILoader()
+    
