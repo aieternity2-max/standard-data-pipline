@@ -21,3 +21,14 @@ data/failed/*
 
 *.log
 logs/
+
+data/raw/*
+data/processed/*
+data/failed/*
+
+# ChromaDB vector database
+data/chroma/
+
+*.db
+*.sqlite
+*.sqlite3
