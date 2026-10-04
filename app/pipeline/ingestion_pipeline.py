@@ -1,5 +1,7 @@
 from app.models.document import Document
 
+from app.logging.logger import get_logger
+
 from app.validation.document_validator import (
     DocumentValidator,
 )
@@ -25,6 +27,10 @@ class IngestionPipeline:
     """
 
     def __init__(self):
+        self.logger = get_logger(
+            "ingestion_pipeline"
+        )
+
         self.document_validator = (
             DocumentValidator()
         )
@@ -46,13 +52,26 @@ class IngestionPipeline:
         Returns only valid documents.
         """
 
-        print(
-            f"Pipeline received {len(documents)} document(s)"
+        # -----------------------------------------
+        # 1. Pipeline started
+        # -----------------------------------------
+
+        self.logger.info(
+            "Ingestion pipeline started"
+        )
+
+        self.logger.info(
+            "Pipeline received %d document(s)",
+            len(documents),
         )
 
         # -----------------------------------------
-        # 1. Validate documents
+        # 2. Validate documents
         # -----------------------------------------
+
+        self.logger.info(
+            "Document validation started"
+        )
 
         validation_results = (
             self.document_validator.validate_many(
@@ -60,8 +79,12 @@ class IngestionPipeline:
             )
         )
 
+        self.logger.info(
+            "Document validation completed"
+        )
+
         # -----------------------------------------
-        # 2. Separate valid and invalid documents
+        # 3. Separate valid and invalid documents
         # -----------------------------------------
 
         valid_documents = []
@@ -85,7 +108,7 @@ class IngestionPipeline:
                 )
 
         # -----------------------------------------
-        # 3. Generate quality summary
+        # 4. Generate quality summary
         # -----------------------------------------
 
         self.last_quality_summary = (
@@ -95,7 +118,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 4. Store invalid documents
+        # 5. Store invalid documents
         # -----------------------------------------
 
         self.last_invalid_documents = (
@@ -103,35 +126,43 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 5. Print quality information
+        # 6. Log quality summary
         # -----------------------------------------
 
-        print(
-            "Data Quality Summary"
+        self.logger.info(
+            "Data quality validation completed"
         )
 
-        print(
-            f"Total Records: "
-            f"{self.last_quality_summary.total_records}"
+        self.logger.info(
+            "Total records: %d",
+            self.last_quality_summary.total_records,
         )
 
-        print(
-            f"Valid Records: "
-            f"{self.last_quality_summary.valid_records}"
+        self.logger.info(
+            "Valid records: %d",
+            self.last_quality_summary.valid_records,
         )
 
-        print(
-            f"Invalid Records: "
-            f"{self.last_quality_summary.invalid_records}"
+        self.logger.warning(
+            "Invalid records: %d",
+            self.last_quality_summary.invalid_records,
         )
 
-        print(
-            f"Quality Score: "
-            f"{self.last_quality_summary.quality_score}%"
+        self.logger.info(
+            "Quality score: %.2f%%",
+            self.last_quality_summary.quality_score,
         )
 
         # -----------------------------------------
-        # 6. Return valid documents
+        # 7. Pipeline completed
+        # -----------------------------------------
+
+        self.logger.info(
+            "Ingestion pipeline completed"
+        )
+
+        # -----------------------------------------
+        # 8. Return valid documents
         # -----------------------------------------
 
         return valid_documents
