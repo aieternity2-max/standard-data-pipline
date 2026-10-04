@@ -1,9 +1,7 @@
 import sys
 
 from app.loaders.loader_factory import LoaderFactory
-from app.pipeline.ingestion_pipeline import (
-    IngestionPipeline,
-)
+from app.pipeline.ingestion_pipeline import IngestionPipeline
 
 
 def main() -> None:
@@ -33,9 +31,27 @@ def main() -> None:
 
     print("\nSelecting loader...")
 
-    loader = LoaderFactory.get_loader(
-        input_file
-    )
+    try:
+
+        loader = LoaderFactory.get_loader(
+            input_file
+        )
+
+    except Exception as error:
+
+        print(
+            "\nERROR: Failed to select loader."
+        )
+
+        print(
+            f"Details: {error}"
+        )
+
+        print(
+            "Pipeline execution stopped."
+        )
+
+        return
 
     print(
         f"Loader selected: "
@@ -48,28 +64,111 @@ def main() -> None:
 
     print("\nLoading documents...")
 
-    documents = loader.load(
-        input_file
-    )
+    try:
+
+        documents = loader.load(
+            input_file
+        )
+
+    except Exception as error:
+
+        error_message = str(error)
+
+        # -----------------------------------------
+        # Empty CSV / empty input file
+        # -----------------------------------------
+
+        if (
+            "No columns to parse from file"
+            in error_message
+        ):
+
+            print(
+                "Documents loaded: 0"
+            )
+
+            print(
+                "\nWARNING: No documents were loaded."
+            )
+
+            print(
+                "Pipeline execution stopped."
+            )
+
+            return
+
+        # -----------------------------------------
+        # Other loading errors
+        # -----------------------------------------
+
+        print(
+            "\nERROR: Failed to load input file."
+        )
+
+        print(
+            f"Details: {error_message}"
+        )
+
+        print(
+            "Pipeline execution stopped."
+        )
+
+        return
 
     print(
         f"Documents loaded: {len(documents)}"
     )
 
     # -----------------------------------------
-    # 4. Run ingestion pipeline
+    # 4. Handle zero documents
     # -----------------------------------------
 
-    print("\nStarting ingestion pipeline...")
+    if not documents:
 
-    pipeline = IngestionPipeline()
+        print(
+            "\nWARNING: No documents were loaded."
+        )
 
-    processed_documents = pipeline.run(
-        documents
+        print(
+            "Pipeline execution stopped."
+        )
+
+        return
+
+    # -----------------------------------------
+    # 5. Start ingestion pipeline
+    # -----------------------------------------
+
+    print(
+        "\nStarting ingestion pipeline..."
     )
 
+    try:
+
+        pipeline = IngestionPipeline()
+
+        processed_documents = pipeline.run(
+            documents
+        )
+
+    except Exception as error:
+
+        print(
+            "\nERROR: Pipeline execution failed."
+        )
+
+        print(
+            f"Details: {error}"
+        )
+
+        print(
+            "Pipeline execution stopped."
+        )
+
+        return
+
     # -----------------------------------------
-    # 5. Display quality summary
+    # 6. Data quality summary
     # -----------------------------------------
 
     print("\n" + "=" * 60)
@@ -101,7 +200,7 @@ def main() -> None:
     )
 
     # -----------------------------------------
-    # 6. Display processing summary
+    # 7. Processing summary
     # -----------------------------------------
 
     print("\n" + "=" * 60)
@@ -114,7 +213,7 @@ def main() -> None:
     )
 
     # -----------------------------------------
-    # 7. Display storage summary
+    # 8. Storage summary
     # -----------------------------------------
 
     print("\n" + "=" * 60)
@@ -132,7 +231,7 @@ def main() -> None:
     )
 
     # -----------------------------------------
-    # 8. Display sample processed documents
+    # 9. Display processed documents
     # -----------------------------------------
 
     print("\n" + "=" * 60)
@@ -158,6 +257,10 @@ def main() -> None:
         print(
             f"Content: {document.content}"
         )
+
+    # -----------------------------------------
+    # 10. Completion message
+    # -----------------------------------------
 
     print("\n" + "=" * 60)
     print("INGESTION COMPLETED")
