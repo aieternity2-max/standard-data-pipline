@@ -143,10 +143,31 @@ class IngestionPipeline:
             self.last_quality_summary.valid_records,
         )
 
-        self.logger.warning(
-            "Invalid records: %d",
-            self.last_quality_summary.invalid_records,
+        # -----------------------------------------
+        # 7. Log invalid records
+        # -----------------------------------------
+
+        invalid_count = (
+            self.last_quality_summary.invalid_records
         )
+
+        if invalid_count > 0:
+
+            self.logger.warning(
+                "Invalid records: %d",
+                invalid_count,
+            )
+
+        else:
+
+            self.logger.info(
+                "Invalid records: %d",
+                invalid_count,
+            )
+
+        # -----------------------------------------
+        # 8. Log quality score
+        # -----------------------------------------
 
         self.logger.info(
             "Quality score: %.2f%%",
@@ -154,7 +175,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 7. Pipeline completed
+        # 9. Pipeline completed
         # -----------------------------------------
 
         self.logger.info(
@@ -162,7 +183,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 8. Return valid documents
+        # 10. Return valid documents
         # -----------------------------------------
 
         return valid_documents
