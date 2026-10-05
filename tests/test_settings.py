@@ -1,6 +1,22 @@
 from app.config.settings import Settings
 
 
+def test_mysql_settings():
+    settings = Settings()
+
+    assert isinstance(settings.mysql_host, str)
+    assert isinstance(settings.mysql_port, int)
+    assert settings.mysql_port == 3306
+    assert settings.mysql_user
+    assert settings.mysql_password is not None
+    assert settings.mysql_database
+
+    assert settings.mysql_pool_size == 5
+    assert settings.mysql_max_overflow == 10
+    assert settings.mysql_pool_timeout == 30
+    assert settings.mysql_pool_recycle == 1800
+
+
 def test_default_settings():
     settings = Settings()
 

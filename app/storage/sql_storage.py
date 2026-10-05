@@ -1,6 +1,9 @@
-import os
 
+import os
 from app.models.document import Document
+from app.config.settings import settings
+
+
 
 from app.config.database import (
     get_database_engine,
@@ -30,9 +33,7 @@ class SQLStorage:
 
         if database_name is None:
 
-            database_name = os.getenv(
-                "MYSQL_DATABASE"
-            )
+         database_name = settings.mysql_database
 
         if not database_name:
 
