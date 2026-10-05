@@ -1,4 +1,5 @@
 from app.models.document import Document
+from app.config.settings import settings
 
 import chromadb
 
@@ -12,7 +13,7 @@ class VectorStorage:
 
     def __init__(
         self,
-        collection_name: str = "documents",
+        collection_name: str | None = None,
     ):
         """
         Initialize vector storage.
@@ -20,13 +21,16 @@ class VectorStorage:
         Creates or loads a persistent ChromaDB collection.
         """
 
+        if collection_name is None:
+            collection_name = settings.chroma_collection
+
         if not collection_name:
             raise ValueError(
                 "collection_name is required"
             )
 
         self.client = chromadb.PersistentClient(
-            path="data/chroma"
+            path=settings.chroma_path
         )
 
         self.collection = (

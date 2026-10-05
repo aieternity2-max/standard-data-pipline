@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     # Pipeline
     batch_size: int = Field(default=1000, gt=0)
 
+    # ChromaDB
+    chroma_path: str = "data/chroma"
+    chroma_collection: str = "documents"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

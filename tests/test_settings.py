@@ -14,3 +14,9 @@ def test_batch_size_must_be_positive():
     settings = Settings(batch_size=500)
 
     assert settings.batch_size == 500
+    
+def test_chroma_settings():
+    settings = Settings()
+
+    assert settings.chroma_path == "data/chroma"
+    assert settings.chroma_collection == "documents"
