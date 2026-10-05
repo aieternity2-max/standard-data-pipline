@@ -275,3 +275,72 @@ def test_ingestion_pipeline_batches():
         )
         == 3
     )
+def test_ingestion_pipeline_continues_after_batch_failure():
+
+    batches = [
+        [
+            Document(
+                id="batch-1-doc-1",
+                source="sample.csv",
+                source_type="csv",
+                content="Alice",
+                metadata={},
+            ),
+        ],
+        [
+            Document(
+                id="batch-2-doc-1",
+                source="sample.csv",
+                source_type="csv",
+                content="Bob",
+                metadata={},
+            ),
+        ],
+        [
+            Document(
+                id="batch-3-doc-1",
+                source="sample.csv",
+                source_type="csv",
+                content="Charlie",
+                metadata={},
+            ),
+        ],
+    ]
+
+    pipeline = IngestionPipeline()
+
+    original_run = pipeline.run
+
+    call_count = 0
+
+    def mock_run(documents):
+
+        nonlocal call_count
+
+        call_count += 1
+
+        if call_count == 2:
+            raise RuntimeError(
+                "Simulated batch failure"
+            )
+
+        return original_run(documents)
+
+    pipeline.run = mock_run
+
+    result = pipeline.run_batches(batches)
+
+    # -----------------------------------------
+    # Batch 1 and Batch 3 should succeed
+    # Batch 2 should fail
+    # -----------------------------------------
+
+    assert len(result) == 2
+
+    assert result[0].id == (
+        "batch-1-doc-1-chunk-1"
+    )
+
+    assert result[1].id == (
+        "batch-3-doc-1-chunk-1"
+    )
