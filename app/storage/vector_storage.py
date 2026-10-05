@@ -1,24 +1,39 @@
-from app.models.document import Document
-
 import chromadb
+
+from app.config.settings import settings
+from app.models.document import Document
 
 
 class VectorStorage:
     """
-    Storage interface for vector databases.
+    Storage interface for ChromaDB vector storage.
 
-    Uses persistent ChromaDB for local vector storage.
+    Uses the application configuration for:
+    - ChromaDB persistence path
+    - Default collection name
+
+    ChromaDB handles embedding generation internally when
+    documents are supplied to the collection.
     """
 
     def __init__(
         self,
-        collection_name: str = "documents",
+        collection_name: str | None = None,
     ):
         """
         Initialize vector storage.
 
-        Creates or loads a persistent ChromaDB collection.
+        Parameters
+        ----------
+        collection_name:
+            Optional ChromaDB collection name.
+            If not provided, the configured default is used.
         """
+
+        collection_name = (
+            collection_name
+            or settings.chroma_collection
+        )
 
         if not collection_name:
             raise ValueError(
@@ -26,7 +41,7 @@ class VectorStorage:
             )
 
         self.client = chromadb.PersistentClient(
-            path="data/chroma"
+            path=settings.chroma_path
         )
 
         self.collection = (
@@ -40,9 +55,14 @@ class VectorStorage:
         documents: list[Document],
     ) -> int:
         """
-        Store documents in the vector database.
+        Store documents in ChromaDB.
 
-        Returns the number of documents saved.
+        ChromaDB generates/manages embeddings internally.
+
+        Returns
+        -------
+        int
+            Number of documents saved.
         """
 
         if not isinstance(
@@ -82,7 +102,10 @@ class VectorStorage:
                 document.metadata or {}
             )
 
-            metadata["source"] = document.source
+            metadata["source"] = (
+                document.source
+            )
+
             metadata["source_type"] = (
                 document.source_type
             )
@@ -112,6 +135,19 @@ class VectorStorage:
     ):
         """
         Search for documents similar to the query.
+
+        Parameters
+        ----------
+        query:
+            Natural-language search query.
+
+        n_results:
+            Maximum number of results.
+
+        Returns
+        -------
+        dict
+            ChromaDB query result.
         """
 
         if not query:
