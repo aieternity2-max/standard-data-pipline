@@ -9,7 +9,6 @@ from app.storage.vector_storage import VectorStorage
 
 from app.models.document import Document
 
-
 from app.validation.document_validator import (
     DocumentValidator,
 )
@@ -42,6 +41,10 @@ class IngestionPipeline:
     SQL Storage
         ↓
     Vector Storage
+
+    Supports:
+    1. Normal processing using run()
+    2. Batch processing using run_batches()
     """
 
     def __init__(self):
@@ -103,8 +106,7 @@ class IngestionPipeline:
         documents: list[Document],
     ) -> list[Document]:
         """
-        Validate, process and prepare documents
-        for storage.
+        Validate, process and store documents.
 
         Returns processed document chunks.
         """
@@ -357,3 +359,130 @@ class IngestionPipeline:
         # -----------------------------------------
 
         return processed_documents
+
+    def run_batches(
+        self,
+        batches,
+    ) -> list[Document]:
+        """
+        Process multiple batches of Documents.
+
+        Each batch is processed independently through
+        the existing ingestion pipeline.
+
+        This allows large datasets to be processed
+        without passing the complete dataset to
+        run() at once.
+
+        Returns all processed document chunks.
+        """
+
+        all_processed_documents = []
+
+        total_sql_records = 0
+        total_vector_records = 0
+
+        total_quality_records = 0
+        total_valid_records = 0
+        total_invalid_records = 0
+
+        for batch_number, documents in enumerate(
+            batches,
+            start=1,
+        ):
+
+            self.logger.info(
+                "Processing batch %d with %d document(s)",
+                batch_number,
+                len(documents),
+            )
+
+            processed_documents = self.run(
+                documents
+            )
+
+            all_processed_documents.extend(
+                processed_documents
+            )
+
+            total_sql_records += (
+                self.last_sql_storage_count
+            )
+
+            total_vector_records += (
+                self.last_vector_storage_count
+            )
+
+            # -------------------------------------
+            # Aggregate quality statistics
+            # -------------------------------------
+
+            if self.last_quality_summary is not None:
+
+                total_quality_records += (
+                    self.last_quality_summary.total_records
+                )
+
+                total_valid_records += (
+                    self.last_quality_summary.valid_records
+                )
+
+                total_invalid_records += (
+                    self.last_quality_summary.invalid_records
+                )
+
+        # -----------------------------------------
+        # Update final pipeline state
+        # -----------------------------------------
+
+        self.last_processed_documents = (
+            all_processed_documents
+        )
+
+        self.last_sql_storage_count = (
+            total_sql_records
+        )
+
+        self.last_vector_storage_count = (
+            total_vector_records
+        )
+
+        # -----------------------------------------
+        # Log batch summary
+        # -----------------------------------------
+
+        self.logger.info(
+            "Batch ingestion completed"
+        )
+
+        self.logger.info(
+            "Total input records: %d",
+            total_quality_records,
+        )
+
+        self.logger.info(
+            "Total valid records: %d",
+            total_valid_records,
+        )
+
+        self.logger.info(
+            "Total invalid records: %d",
+            total_invalid_records,
+        )
+
+        self.logger.info(
+            "Total processed documents: %d",
+            len(all_processed_documents),
+        )
+
+        self.logger.info(
+            "Total SQL records: %d",
+            total_sql_records,
+        )
+
+        self.logger.info(
+            "Total vector records: %d",
+            total_vector_records,
+        )
+
+        return all_processed_documents
