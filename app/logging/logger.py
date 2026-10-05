@@ -1,7 +1,7 @@
 import logging
 import sys
 from pathlib import Path
-
+from app.config.settings import settings
 
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
@@ -26,7 +26,13 @@ def get_logger(
     if logger.handlers:
         return logger
 
-    logger.setLevel(logging.INFO)
+    logger.setLevel(
+    getattr(
+        logging,
+        settings.log_level.upper(),
+        logging.INFO,
+    )
+)
 
     # -----------------------------------------
     # Console Handler

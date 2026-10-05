@@ -1,7 +1,11 @@
 import sys
 
+from app.logging.logger import get_logger
 from app.loaders.loader_factory import LoaderFactory
 from app.pipeline.ingestion_pipeline import IngestionPipeline
+
+
+logger = get_logger("main")
 
 
 def main() -> None:
@@ -16,12 +20,21 @@ def main() -> None:
 
     if len(sys.argv) < 2:
 
+        logger.warning(
+            "Pipeline started without an input file"
+        )
+
         print("Usage:")
         print("  python -m app.main <file_path>")
 
         return
 
     input_file = sys.argv[1]
+
+    logger.info(
+        "Pipeline started with input file: %s",
+        input_file,
+    )
 
     print(f"Input file: {input_file}")
 
@@ -39,6 +52,11 @@ def main() -> None:
 
     except Exception as error:
 
+        logger.exception(
+            "Failed to select loader for input: %s",
+            input_file,
+        )
+
         print(
             "\nERROR: Failed to select loader."
         )
@@ -52,6 +70,11 @@ def main() -> None:
         )
 
         return
+
+    logger.info(
+        "Loader selected: %s",
+        loader.__class__.__name__,
+    )
 
     print(
         f"Loader selected: "
@@ -83,6 +106,11 @@ def main() -> None:
             in error_message
         ):
 
+            logger.warning(
+                "Input file contains no data: %s",
+                input_file,
+            )
+
             print(
                 "Documents loaded: 0"
             )
@@ -101,6 +129,11 @@ def main() -> None:
         # Other loading errors
         # -----------------------------------------
 
+        logger.exception(
+            "Failed to load input file: %s",
+            input_file,
+        )
+
         print(
             "\nERROR: Failed to load input file."
         )
@@ -115,6 +148,11 @@ def main() -> None:
 
         return
 
+    logger.info(
+        "Documents loaded successfully: %d",
+        len(documents),
+    )
+
     print(
         f"Documents loaded: {len(documents)}"
     )
@@ -124,6 +162,11 @@ def main() -> None:
     # -----------------------------------------
 
     if not documents:
+
+        logger.warning(
+            "No documents were loaded from input: %s",
+            input_file,
+        )
 
         print(
             "\nWARNING: No documents were loaded."
@@ -152,6 +195,11 @@ def main() -> None:
         )
 
     except Exception as error:
+
+        logger.exception(
+            "Pipeline execution failed for input: %s",
+            input_file,
+        )
 
         print(
             "\nERROR: Pipeline execution failed."
@@ -261,6 +309,11 @@ def main() -> None:
     # -----------------------------------------
     # 10. Completion message
     # -----------------------------------------
+
+    logger.info(
+        "Ingestion completed successfully for input: %s",
+        input_file,
+    )
 
     print("\n" + "=" * 60)
     print("INGESTION COMPLETED")
