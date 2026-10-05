@@ -123,3 +123,28 @@ def test_validate_many():
         result.is_valid
         for result in results
     )
+
+
+def test_mysql_document():
+
+    document = Document(
+        id="employee-1",
+        source="OFFICE.employee",
+        source_type="mysql",
+        content="{'EMPID': 1001, 'EMP_NAME': 'Rahul'}",
+        metadata={
+            "database": "OFFICE",
+            "table": "employee",
+            "row_number": 1,
+        },
+    )
+
+    validator = DocumentValidator()
+
+    result = validator.validate(document)
+
+    assert result.is_valid is True
+
+    assert result.errors == []
+
+    assert result.warnings == []

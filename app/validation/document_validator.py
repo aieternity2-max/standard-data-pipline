@@ -35,6 +35,7 @@ class DocumentValidator:
         "txt",
         "pdf",
         "docx",
+        "mysql",
     }
 
     def validate(
