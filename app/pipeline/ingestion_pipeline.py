@@ -9,7 +9,6 @@ from app.storage.vector_storage import VectorStorage
 
 from app.models.document import Document
 
-
 from app.validation.document_validator import (
     DocumentValidator,
 )
@@ -42,6 +41,10 @@ class IngestionPipeline:
     SQL Storage
         ↓
     Vector Storage
+
+    Supports:
+    1. Normal processing using run()
+    2. Batch processing using run_batches()
     """
 
     def __init__(self):
@@ -98,13 +101,30 @@ class IngestionPipeline:
 
         self.last_vector_storage_count = 0
 
+        # -----------------------------------------
+        # Batch pipeline state
+        # -----------------------------------------
+
+        self.last_batch_total_input = 0
+
+        self.last_batch_total_valid = 0
+
+        self.last_batch_total_invalid = 0
+
+        self.last_batch_total_sql = 0
+
+        self.last_batch_total_vector = 0
+
+        self.last_batch_successful = 0
+
+        self.last_batch_failed = 0
+
     def run(
         self,
         documents: list[Document],
     ) -> list[Document]:
         """
-        Validate, process and prepare documents
-        for storage.
+        Validate, process and store documents.
 
         Returns processed document chunks.
         """
@@ -145,6 +165,7 @@ class IngestionPipeline:
         # -----------------------------------------
 
         valid_documents = []
+
         invalid_documents = []
 
         for document, result in zip(
@@ -200,10 +221,6 @@ class IngestionPipeline:
             self.last_quality_summary.valid_records,
         )
 
-        # -----------------------------------------
-        # 7. Log invalid records
-        # -----------------------------------------
-
         invalid_count = (
             self.last_quality_summary.invalid_records
         )
@@ -222,17 +239,13 @@ class IngestionPipeline:
                 invalid_count,
             )
 
-        # -----------------------------------------
-        # 8. Log quality score
-        # -----------------------------------------
-
         self.logger.info(
             "Quality score: %.2f%%",
             self.last_quality_summary.quality_score,
         )
 
         # -----------------------------------------
-        # 9. Process valid documents
+        # 7. Process valid documents
         # -----------------------------------------
 
         self.logger.info(
@@ -290,7 +303,7 @@ class IngestionPipeline:
             )
 
         # -----------------------------------------
-        # 10. Store processed documents
+        # 8. Store processed documents in state
         # -----------------------------------------
 
         self.last_processed_documents = (
@@ -307,7 +320,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 11. SQL Storage
+        # 9. SQL Storage
         # -----------------------------------------
 
         self.logger.info(
@@ -326,7 +339,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 12. Vector Storage
+        # 10. Vector Storage
         # -----------------------------------------
 
         self.logger.info(
@@ -345,7 +358,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 13. Pipeline completed
+        # 11. Pipeline completed
         # -----------------------------------------
 
         self.logger.info(
@@ -353,7 +366,225 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 14. Return processed documents
+        # 12. Return processed documents
         # -----------------------------------------
 
         return processed_documents
+
+    def run_batches(
+        self,
+        batches,
+    ) -> list[Document]:
+        """
+        Process multiple batches of Documents.
+
+        Each batch is processed independently. If a batch
+        fails, the error is logged and processing continues
+        with the next batch.
+
+        Returns all successfully processed document chunks.
+        """
+
+        # -----------------------------------------
+        # Batch aggregation state
+        # -----------------------------------------
+
+        all_processed_documents = []
+
+        total_sql_records = 0
+
+        total_vector_records = 0
+
+        total_quality_records = 0
+
+        total_valid_records = 0
+
+        total_invalid_records = 0
+
+        successful_batches = 0
+
+        failed_batches = 0
+
+        # -----------------------------------------
+        # Process batches
+        # -----------------------------------------
+
+        for batch_number, documents in enumerate(
+            batches,
+            start=1,
+        ):
+
+            self.logger.info(
+                "Processing batch %d with %d document(s)",
+                batch_number,
+                len(documents),
+            )
+
+            try:
+
+                processed_documents = self.run(
+                    documents
+                )
+
+                # ---------------------------------
+                # Collect processed documents
+                # ---------------------------------
+
+                all_processed_documents.extend(
+                    processed_documents
+                )
+
+                # ---------------------------------
+                # Collect storage statistics
+                # ---------------------------------
+
+                total_sql_records += (
+                    self.last_sql_storage_count
+                )
+
+                total_vector_records += (
+                    self.last_vector_storage_count
+                )
+
+                # ---------------------------------
+                # Collect quality statistics
+                # ---------------------------------
+
+                if (
+                    self.last_quality_summary
+                    is not None
+                ):
+
+                    total_quality_records += (
+                        self.last_quality_summary.total_records
+                    )
+
+                    total_valid_records += (
+                        self.last_quality_summary.valid_records
+                    )
+
+                    total_invalid_records += (
+                        self.last_quality_summary.invalid_records
+                    )
+
+                successful_batches += 1
+
+                self.logger.info(
+                    "Batch %d completed successfully",
+                    batch_number,
+                )
+
+            except Exception as exc:
+
+                failed_batches += 1
+
+                self.logger.exception(
+                    "Batch %d failed: %s",
+                    batch_number,
+                    exc,
+                )
+
+                # Continue with the next batch.
+                continue
+
+        # -----------------------------------------
+        # Update final pipeline state
+        # -----------------------------------------
+
+        self.last_processed_documents = (
+            all_processed_documents
+        )
+
+        self.last_sql_storage_count = (
+            total_sql_records
+        )
+
+        self.last_vector_storage_count = (
+            total_vector_records
+        )
+
+        # -----------------------------------------
+        # Store batch statistics
+        # -----------------------------------------
+
+        self.last_batch_total_input = (
+            total_quality_records
+        )
+
+        self.last_batch_total_valid = (
+            total_valid_records
+        )
+
+        self.last_batch_total_invalid = (
+            total_invalid_records
+        )
+
+        self.last_batch_total_sql = (
+            total_sql_records
+        )
+
+        self.last_batch_total_vector = (
+            total_vector_records
+        )
+
+        self.last_batch_successful = (
+            successful_batches
+        )
+
+        self.last_batch_failed = (
+            failed_batches
+        )
+
+        # -----------------------------------------
+        # Log batch summary
+        # -----------------------------------------
+
+        self.logger.info(
+            "Batch ingestion completed"
+        )
+
+        self.logger.info(
+            "Successful batches: %d",
+            successful_batches,
+        )
+
+        self.logger.info(
+            "Failed batches: %d",
+            failed_batches,
+        )
+
+        self.logger.info(
+            "Total input records: %d",
+            total_quality_records,
+        )
+
+        self.logger.info(
+            "Total valid records: %d",
+            total_valid_records,
+        )
+
+        self.logger.info(
+            "Total invalid records: %d",
+            total_invalid_records,
+        )
+
+        self.logger.info(
+            "Total processed documents: %d",
+            len(all_processed_documents),
+        )
+
+        self.logger.info(
+            "Total SQL records: %d",
+            total_sql_records,
+        )
+
+        self.logger.info(
+            "Total vector records: %d",
+            total_vector_records,
+        )
+
+        # -----------------------------------------
+        # Return successful results
+        # -----------------------------------------
+
+        return all_processed_documents

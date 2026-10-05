@@ -2,7 +2,7 @@ from app.loaders.csv_loader import CSVLoader
 from app.loaders.excel_loader import ExcelLoader
 from app.loaders.loader_factory import LoaderFactory
 from app.loaders.json_loader import JSONLoader
-from app.loaders.json_loader import JSONLoader
+from app.loaders.mysql_loader import MySQLLoader
 import pytest
 
 def test_csv_loader_factory():
@@ -54,3 +54,19 @@ def test_unsupported_file_type():
         LoaderFactory.get_loader(
             "sample.xyz"
         )
+
+def test_mysql_loader_factory():
+
+    loader = LoaderFactory.get_mysql_loader(
+        database_name="OFFICE",
+        table_name="employee",
+    )
+
+    assert isinstance(
+        loader,
+        MySQLLoader,
+    )
+
+    assert loader.database_name == "OFFICE"
+
+    assert loader.table_name == "employee"

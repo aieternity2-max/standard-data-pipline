@@ -8,6 +8,7 @@ from app.loaders.api_loader import APILoader
 from app.loaders.pdf_loader import PDFLoader
 from app.loaders.docx_loader import DOCXLoader
 from app.loaders.txt_loader import TXTLoader
+from app.loaders.mysql_loader import MySQLLoader
 
 
 class LoaderFactory:
@@ -62,3 +63,18 @@ class LoaderFactory:
         """
 
         return APILoader()
+
+    @classmethod
+    def get_mysql_loader(
+        cls,
+        database_name: str,
+        table_name: str,
+    ) -> MySQLLoader:
+        """
+        Return a MySQL loader for a database table.
+        """
+
+        return MySQLLoader(
+            database_name=database_name,
+            table_name=table_name,
+        )
