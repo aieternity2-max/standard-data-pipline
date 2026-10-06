@@ -94,6 +94,10 @@ class IngestionPipeline:
 
         self.last_ai_results = []
 
+        # Track documents for which AI processing
+        # failed without stopping the pipeline.
+        self.last_ai_failures = []
+
         # -----------------------------------------
         # Storage components
         # -----------------------------------------
@@ -155,6 +159,10 @@ class IngestionPipeline:
         6. Chunk
         7. Store in SQL
         8. Store in vector database
+
+        AI processing failures are isolated per document.
+        A failure in one AI operation does not stop the
+        remaining documents from being processed.
         """
 
         # -----------------------------------------
@@ -169,13 +177,17 @@ class IngestionPipeline:
                 "documents must be a list"
             )
 
+        # -----------------------------------------
         # Reset per-run state
+        # -----------------------------------------
 
         self.last_invalid_documents = []
 
         self.last_processed_documents = []
 
         self.last_ai_results = []
+
+        self.last_ai_failures = []
 
         self.last_sql_storage_count = 0
 
@@ -281,15 +293,42 @@ class IngestionPipeline:
 
             for document in valid_documents:
 
-                ai_result = (
-                    self.ai_processor.process(
-                        document
-                    )
-                )
+                try:
 
-                ai_results.append(
-                    ai_result
-                )
+                    ai_result = (
+                        self.ai_processor.process(
+                            document
+                        )
+                    )
+
+                    ai_results.append(
+                        ai_result
+                    )
+
+                except Exception as exc:
+
+                    # ---------------------------------
+                    # AI failure is isolated
+                    # to this document.
+                    # ---------------------------------
+
+                    self.last_ai_failures.append(
+                        {
+                            "document_id": document.id,
+                            "error": str(exc),
+                        }
+                    )
+
+                    self.logger.exception(
+                        "AI processing failed for document %s: %s",
+                        document.id,
+                        exc,
+                    )
+
+                    # Continue processing the next
+                    # document instead of failing the
+                    # entire pipeline.
+                    continue
 
             self.last_ai_results = (
                 ai_results
@@ -304,6 +343,11 @@ class IngestionPipeline:
                 len(ai_results),
             )
 
+            self.logger.info(
+                "AI failed documents: %d",
+                len(self.last_ai_failures),
+            )
+
         else:
 
             self.logger.info(
@@ -311,6 +355,8 @@ class IngestionPipeline:
             )
 
             self.last_ai_results = []
+
+            self.last_ai_failures = []
 
         # -----------------------------------------
         # 4. Process valid documents
