@@ -1,8 +1,28 @@
 import pytest
 
+from app.embeddings.base import EmbeddingProvider
 from app.embeddings.embedding_service import (
     EmbeddingService,
 )
+
+
+class MockEmbeddingProvider(
+    EmbeddingProvider
+):
+    """
+    Test implementation of the embedding
+    provider interface.
+    """
+
+    def embed(
+        self,
+        texts: list[str],
+    ) -> list[list[float]]:
+
+        return [
+            [1.0, 2.0, 3.0]
+            for _ in texts
+        ]
 
 
 def test_embedding_service_prepare_text():
@@ -37,6 +57,7 @@ def test_embedding_service_rejects_empty_text():
             "   "
         )
 
+
 def test_embedding_service_requires_provider_for_embedding():
 
     service = EmbeddingService()
@@ -69,19 +90,6 @@ def test_embedding_service_empty_embedding_input():
     )
 
 
-class MockEmbeddingProvider:
-
-    def embed(
-        self,
-        texts,
-    ):
-
-        return [
-            [1.0, 2.0, 3.0]
-            for _ in texts
-        ]
-
-
 def test_embedding_service_uses_provider():
 
     provider = MockEmbeddingProvider()
@@ -101,3 +109,10 @@ def test_embedding_service_uses_provider():
         [1.0, 2.0, 3.0],
         [1.0, 2.0, 3.0],
     ]
+
+
+def test_embedding_provider_is_abstract():
+
+    with pytest.raises(TypeError):
+
+        EmbeddingProvider()
