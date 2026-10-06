@@ -1,5 +1,8 @@
 from app.logging.logger import get_logger
 
+from app.ai.ai_processor import AIProcessor
+from app.config.settings import settings
+
 from app.processors.parser import DocumentParser
 from app.processors.cleaner import DocumentCleaner
 from app.processors.chunker import DocumentChunker
@@ -29,6 +32,8 @@ class IngestionPipeline:
     Document Validation
         ↓
     Valid Documents
+        ↓
+    AI Processing
         ↓
     Parser
         ↓
@@ -80,6 +85,20 @@ class IngestionPipeline:
         self.chunker = DocumentChunker()
 
         # -----------------------------------------
+        # AI processing
+        # -----------------------------------------
+
+        self.ai_enabled = settings.ai_enabled
+
+        self.ai_processor = AIProcessor()
+
+        self.last_ai_results = []
+
+        # Track documents for which AI processing
+        # failed without stopping the pipeline.
+        self.last_ai_failures = []
+
+        # -----------------------------------------
         # Storage components
         # -----------------------------------------
 
@@ -119,74 +138,134 @@ class IngestionPipeline:
 
         self.last_batch_failed = 0
 
+    # =================================================
+    # NORMAL PIPELINE
+    # =================================================
+
     def run(
         self,
-        documents: list[Document],
+        documents,
     ) -> list[Document]:
         """
-        Validate, process and store documents.
+        Run the ingestion pipeline for a list of documents.
 
-        Returns processed document chunks.
+        Flow:
+
+        1. Validate documents
+        2. Generate quality summary
+        3. AI processing
+        4. Parse
+        5. Clean
+        6. Chunk
+        7. Store in SQL
+        8. Store in vector database
+
+        AI processing failures are isolated per document.
+        A failure in one AI operation does not stop the
+        remaining documents from being processed.
         """
 
         # -----------------------------------------
-        # 1. Pipeline started
+        # Input validation
         # -----------------------------------------
 
-        self.logger.info(
-            "Ingestion pipeline started"
-        )
-
-        self.logger.info(
-            "Pipeline received %d document(s)",
-            len(documents),
-        )
+        if not isinstance(
+            documents,
+            list,
+        ):
+            raise TypeError(
+                "documents must be a list"
+            )
 
         # -----------------------------------------
-        # 2. Validate documents
+        # Reset per-run state
+        # -----------------------------------------
+
+        self.last_invalid_documents = []
+
+        self.last_processed_documents = []
+
+        self.last_ai_results = []
+
+        self.last_ai_failures = []
+
+        self.last_sql_storage_count = 0
+
+        self.last_vector_storage_count = 0
+
+        self.last_quality_summary = None
+
+        # -----------------------------------------
+        # 1. Validate documents
         # -----------------------------------------
 
         self.logger.info(
             "Document validation started"
         )
 
-        validation_results = (
-            self.document_validator.validate_many(
-                documents
-            )
-        )
-
-        self.logger.info(
-            "Document validation completed"
-        )
-
-        # -----------------------------------------
-        # 3. Separate valid and invalid documents
-        # -----------------------------------------
+        validation_results = []
 
         valid_documents = []
 
         invalid_documents = []
 
-        for document, result in zip(
-            documents,
-            validation_results,
-        ):
+        for document in documents:
 
-            if result.is_valid:
+            try:
 
-                valid_documents.append(
-                    document
+                validation_result = (
+                    self.document_validator.validate(
+                        document
+                    )
                 )
 
-            else:
+                validation_results.append(
+                    validation_result
+                )
+
+                if validation_result:
+
+                    valid_documents.append(
+                        document
+                    )
+
+                else:
+
+                    invalid_documents.append(
+                        document
+                    )
+
+            except Exception as exc:
+
+                self.logger.exception(
+                    "Document validation failed: %s",
+                    exc,
+                )
 
                 invalid_documents.append(
                     document
                 )
 
         # -----------------------------------------
-        # 4. Generate quality summary
+        # Store invalid documents
+        # -----------------------------------------
+
+        self.last_invalid_documents = (
+            invalid_documents
+        )
+
+        self.logger.info(
+            "Valid documents: %d",
+            len(valid_documents),
+        )
+
+        self.logger.info(
+            "Invalid documents: %d",
+            len(invalid_documents),
+        )
+
+        # -----------------------------------------
+        # 2. Generate quality summary
         # -----------------------------------------
 
         self.last_quality_summary = (
@@ -195,57 +274,92 @@ class IngestionPipeline:
             )
         )
 
-        # -----------------------------------------
-        # 5. Store invalid documents
-        # -----------------------------------------
-
-        self.last_invalid_documents = (
-            invalid_documents
-        )
-
-        # -----------------------------------------
-        # 6. Log quality summary
-        # -----------------------------------------
-
         self.logger.info(
-            "Data quality validation completed"
+            "Document quality score: %.2f",
+            self.last_quality_summary.quality_score,
         )
 
-        self.logger.info(
-            "Total records: %d",
-            self.last_quality_summary.total_records,
-        )
+        # -----------------------------------------
+        # 3. AI document processing
+        # -----------------------------------------
 
-        self.logger.info(
-            "Valid records: %d",
-            self.last_quality_summary.valid_records,
-        )
+        ai_results = []
 
-        invalid_count = (
-            self.last_quality_summary.invalid_records
-        )
+        if self.ai_enabled:
 
-        if invalid_count > 0:
+            self.logger.info(
+                "AI document processing started"
+            )
 
-            self.logger.warning(
-                "Invalid records: %d",
-                invalid_count,
+            for document in valid_documents:
+
+                try:
+
+                    ai_result = (
+                        self.ai_processor.process(
+                            document
+                        )
+                    )
+
+                    ai_results.append(
+                        ai_result
+                    )
+
+                except Exception as exc:
+
+                    # ---------------------------------
+                    # AI failure is isolated
+                    # to this document.
+                    # ---------------------------------
+
+                    self.last_ai_failures.append(
+                        {
+                            "document_id": document.id,
+                            "error": str(exc),
+                        }
+                    )
+
+                    self.logger.exception(
+                        "AI processing failed for document %s: %s",
+                        document.id,
+                        exc,
+                    )
+
+                    # Continue processing the next
+                    # document instead of failing the
+                    # entire pipeline.
+                    continue
+
+            self.last_ai_results = (
+                ai_results
+            )
+
+            self.logger.info(
+                "AI document processing completed"
+            )
+
+            self.logger.info(
+                "AI processed documents: %d",
+                len(ai_results),
+            )
+
+            self.logger.info(
+                "AI failed documents: %d",
+                len(self.last_ai_failures),
             )
 
         else:
 
             self.logger.info(
-                "Invalid records: %d",
-                invalid_count,
+                "AI document processing disabled"
             )
 
-        self.logger.info(
-            "Quality score: %.2f%%",
-            self.last_quality_summary.quality_score,
-        )
+            self.last_ai_results = []
+
+            self.last_ai_failures = []
 
         # -----------------------------------------
-        # 7. Process valid documents
+        # 4. Process valid documents
         # -----------------------------------------
 
         self.logger.info(
@@ -303,7 +417,7 @@ class IngestionPipeline:
             )
 
         # -----------------------------------------
-        # 8. Store processed documents in state
+        # 5. Store processed documents in state
         # -----------------------------------------
 
         self.last_processed_documents = (
@@ -320,7 +434,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 9. SQL Storage
+        # 6. SQL Storage
         # -----------------------------------------
 
         self.logger.info(
@@ -339,7 +453,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 10. Vector Storage
+        # 7. Vector Storage
         # -----------------------------------------
 
         self.logger.info(
@@ -358,7 +472,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 11. Pipeline completed
+        # 8. Pipeline completed
         # -----------------------------------------
 
         self.logger.info(
@@ -366,10 +480,14 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 12. Return processed documents
+        # 9. Return processed documents
         # -----------------------------------------
 
         return processed_documents
+
+    # =================================================
+    # BATCH PIPELINE
+    # =================================================
 
     def run_batches(
         self,
@@ -378,12 +496,25 @@ class IngestionPipeline:
         """
         Process multiple batches of Documents.
 
-        Each batch is processed independently. If a batch
-        fails, the error is logged and processing continues
-        with the next batch.
+        Each batch is processed independently.
 
-        Returns all successfully processed document chunks.
+        If a batch fails:
+        - The error is logged.
+        - The failed batch is skipped.
+        - Processing continues with the next batch.
+
+        Returns all successfully processed
+        document chunks.
         """
+
+        # -----------------------------------------
+        # Input validation
+        # -----------------------------------------
+
+        if batches is None:
+            raise ValueError(
+                "batches cannot be None"
+            )
 
         # -----------------------------------------
         # Batch aggregation state
@@ -409,7 +540,7 @@ class IngestionPipeline:
         # Process batches
         # -----------------------------------------
 
-        for batch_number, documents in enumerate(
+        for batch_number, batch_documents in enumerate(
             batches,
             start=1,
         ):
@@ -417,13 +548,17 @@ class IngestionPipeline:
             self.logger.info(
                 "Processing batch %d with %d document(s)",
                 batch_number,
-                len(documents),
+                len(batch_documents),
             )
 
             try:
 
+                # ---------------------------------
+                # Run individual batch
+                # ---------------------------------
+
                 processed_documents = self.run(
-                    documents
+                    batch_documents
                 )
 
                 # ---------------------------------
@@ -435,12 +570,16 @@ class IngestionPipeline:
                 )
 
                 # ---------------------------------
-                # Collect storage statistics
+                # Collect SQL statistics
                 # ---------------------------------
 
                 total_sql_records += (
                     self.last_sql_storage_count
                 )
+
+                # ---------------------------------
+                # Collect vector statistics
+                # ---------------------------------
 
                 total_vector_records += (
                     self.last_vector_storage_count
@@ -467,6 +606,10 @@ class IngestionPipeline:
                         self.last_quality_summary.invalid_records
                     )
 
+                # ---------------------------------
+                # Mark batch successful
+                # ---------------------------------
+
                 successful_batches += 1
 
                 self.logger.info(
@@ -476,6 +619,10 @@ class IngestionPipeline:
 
             except Exception as exc:
 
+                # ---------------------------------
+                # Mark batch failed
+                # ---------------------------------
+
                 failed_batches += 1
 
                 self.logger.exception(
@@ -484,7 +631,10 @@ class IngestionPipeline:
                     exc,
                 )
 
-                # Continue with the next batch.
+                # ---------------------------------
+                # Continue with next batch
+                # ---------------------------------
+
                 continue
 
         # -----------------------------------------
