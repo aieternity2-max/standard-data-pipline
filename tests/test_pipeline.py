@@ -344,3 +344,37 @@ def test_ingestion_pipeline_continues_after_batch_failure():
     assert result[1].id == (
         "batch-3-doc-1-chunk-1"
     )
+def test_ingestion_pipeline_ai_can_be_disabled():
+
+    from app.config.settings import Settings
+
+    documents = [
+        Document(
+            id="ai-disabled-1",
+            source="sample.txt",
+            source_type="txt",
+            content="Hello world",
+            metadata={},
+        ),
+    ]
+
+    pipeline = IngestionPipeline()
+
+    # Disable AI processing
+    pipeline.settings = Settings(
+        ai_enabled=False
+    )
+
+    # Mock storage
+    pipeline.sql_storage.save = (
+        lambda documents: len(documents)
+    )
+
+    pipeline.vector_storage.save = (
+        lambda documents: len(documents)
+    )
+
+    result = pipeline.run(documents)
+
+    assert len(result) == 1
+    assert result[0].id == "ai-disabled-1-chunk-1"

@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     chroma_path: str = "data/chroma"
     chroma_collection: str = "documents"
 
+    # AI
+    ai_enabled: bool = True
+    embedding_provider: str = "chromadb"
+
+
     # MySQL
     mysql_host: str = "localhost"
     mysql_port: int = 3306

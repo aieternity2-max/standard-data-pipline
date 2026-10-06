@@ -37,3 +37,18 @@ def test_chroma_settings():
 
     assert settings.chroma_path == "data/chroma"
     assert settings.chroma_collection == "documents"
+def test_ai_settings():
+    settings = Settings()
+
+    assert settings.ai_enabled is True
+    assert settings.embedding_provider == "chromadb"
+
+
+def test_ai_settings_can_be_configured():
+    settings = Settings(
+        ai_enabled=False,
+        embedding_provider="custom",
+    )
+
+    assert settings.ai_enabled is False
+    assert settings.embedding_provider == "custom"

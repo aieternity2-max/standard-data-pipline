@@ -1,6 +1,7 @@
 from app.logging.logger import get_logger
 
 from app.ai.ai_processor import AIProcessor
+from app.config.settings import settings
 
 from app.processors.parser import DocumentParser
 from app.processors.cleaner import DocumentCleaner
@@ -87,6 +88,8 @@ class IngestionPipeline:
         # AI processing
         # -----------------------------------------
 
+        self.ai_enabled = settings.ai_enabled
+
         self.ai_processor = AIProcessor()
 
         self.last_ai_results = []
@@ -167,11 +170,17 @@ class IngestionPipeline:
             )
 
         # Reset per-run state
+
         self.last_invalid_documents = []
+
         self.last_processed_documents = []
+
         self.last_ai_results = []
+
         self.last_sql_storage_count = 0
+
         self.last_vector_storage_count = 0
+
         self.last_quality_summary = None
 
         # -----------------------------------------
@@ -262,36 +271,46 @@ class IngestionPipeline:
         # 3. AI document processing
         # -----------------------------------------
 
-        self.logger.info(
-            "AI document processing started"
-        )
-
         ai_results = []
 
-        for document in valid_documents:
+        if self.ai_enabled:
 
-            ai_result = (
-                self.ai_processor.process(
-                    document
+            self.logger.info(
+                "AI document processing started"
+            )
+
+            for document in valid_documents:
+
+                ai_result = (
+                    self.ai_processor.process(
+                        document
+                    )
                 )
+
+                ai_results.append(
+                    ai_result
+                )
+
+            self.last_ai_results = (
+                ai_results
             )
 
-            ai_results.append(
-                ai_result
+            self.logger.info(
+                "AI document processing completed"
             )
 
-        self.last_ai_results = (
-            ai_results
-        )
+            self.logger.info(
+                "AI processed documents: %d",
+                len(ai_results),
+            )
 
-        self.logger.info(
-            "AI document processing completed"
-        )
+        else:
 
-        self.logger.info(
-            "AI processed documents: %d",
-            len(ai_results),
-        )
+            self.logger.info(
+                "AI document processing disabled"
+            )
+
+            self.last_ai_results = []
 
         # -----------------------------------------
         # 4. Process valid documents
