@@ -378,3 +378,88 @@ def test_ingestion_pipeline_ai_can_be_disabled():
 
     assert len(result) == 1
     assert result[0].id == "ai-disabled-1-chunk-1"
+def test_ingestion_pipeline_ai_failure_continues():
+
+    documents = [
+        Document(
+            id="ai-failure-1",
+            source="sample.txt",
+            source_type="txt",
+            content="First document",
+            metadata={},
+        ),
+        Document(
+            id="ai-failure-2",
+            source="sample.txt",
+            source_type="txt",
+            content="Second document",
+            metadata={},
+        ),
+    ]
+
+    pipeline = IngestionPipeline()
+
+    # -----------------------------------------
+    # Mock AI processing
+    # -----------------------------------------
+
+    original_process = (
+        pipeline.ai_processor.process
+    )
+
+    call_count = 0
+
+    def mock_process(document):
+
+        nonlocal call_count
+
+        call_count += 1
+
+        if call_count == 1:
+            raise RuntimeError(
+                "Simulated AI failure"
+            )
+
+        return original_process(
+            document
+        )
+
+    pipeline.ai_processor.process = (
+        mock_process
+    )
+
+    # -----------------------------------------
+    # Mock storage
+    # -----------------------------------------
+
+    pipeline.sql_storage.save = (
+        lambda documents: len(documents)
+    )
+
+    pipeline.vector_storage.save = (
+        lambda documents: len(documents)
+    )
+
+    # -----------------------------------------
+    # Run pipeline
+    # -----------------------------------------
+
+    result = pipeline.run(
+        documents
+    )
+
+    # -----------------------------------------
+    # Pipeline should continue
+    # -----------------------------------------
+
+    assert len(result) == 2
+
+    assert result[0].id == (
+        "ai-failure-1-chunk-1"
+    )
+
+    assert result[1].id == (
+        "ai-failure-2-chunk-1"
+    )
+
+    assert call_count == 2
