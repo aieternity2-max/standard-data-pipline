@@ -39,16 +39,18 @@ def test_ingestion_pipeline_validation_and_processing():
 
     vector_saved = []
 
-    def mock_sql_save(documents):
+    def mock_sql_save(documents, embeddings=None):
         sql_saved.extend(documents)
         return len(documents)
 
-    def mock_vector_save(documents):
+    def mock_vector_save(
+        documents,
+        embeddings=None,
+    ):
         vector_saved.extend(documents)
         return len(documents)
 
     pipeline.sql_storage.save = mock_sql_save
-
     pipeline.vector_storage.save = mock_vector_save
 
     # -----------------------------------------
@@ -116,9 +118,12 @@ def test_ingestion_pipeline_validation_and_processing():
     # No invalid documents
     # -----------------------------------------
 
-    assert len(
-        pipeline.last_invalid_documents
-    ) == 0
+    assert (
+        len(
+            pipeline.last_invalid_documents
+        )
+        == 0
+    )
 
     # -----------------------------------------
     # Processed documents stored in pipeline
@@ -173,6 +178,7 @@ def test_ingestion_pipeline_validation_and_processing():
         == "customer-2-chunk-1"
     )
 
+
 def test_ingestion_pipeline_batches():
 
     batches = [
@@ -213,16 +219,21 @@ def test_ingestion_pipeline_batches():
 
     vector_saved = []
 
-    def mock_sql_save(documents):
+    def mock_sql_save(
+        documents,
+        embeddings=None,
+    ):
         sql_saved.extend(documents)
         return len(documents)
 
-    def mock_vector_save(documents):
+    def mock_vector_save(
+        documents,
+        embeddings=None,
+    ):
         vector_saved.extend(documents)
         return len(documents)
 
     pipeline.sql_storage.save = mock_sql_save
-
     pipeline.vector_storage.save = mock_vector_save
 
     # -----------------------------------------
@@ -239,9 +250,20 @@ def test_ingestion_pipeline_batches():
 
     assert len(result) == 3
 
-    assert result[0].id == "batch-1-doc-1-chunk-1"
-    assert result[1].id == "batch-1-doc-2-chunk-1"
-    assert result[2].id == "batch-2-doc-1-chunk-1"
+    assert (
+        result[0].id
+        == "batch-1-doc-1-chunk-1"
+    )
+
+    assert (
+        result[1].id
+        == "batch-1-doc-2-chunk-1"
+    )
+
+    assert (
+        result[2].id
+        == "batch-2-doc-1-chunk-1"
+    )
 
     # -----------------------------------------
     # Verify SQL storage
@@ -275,6 +297,8 @@ def test_ingestion_pipeline_batches():
         )
         == 3
     )
+
+
 def test_ingestion_pipeline_continues_after_batch_failure():
 
     batches = [
@@ -328,22 +352,28 @@ def test_ingestion_pipeline_continues_after_batch_failure():
 
     pipeline.run = mock_run
 
-    result = pipeline.run_batches(batches)
+    result = pipeline.run_batches(
+        batches
+    )
 
     # -----------------------------------------
-    # Batch 1 and Batch 3 should succeed
-    # Batch 2 should fail
+    # Batch 1 and Batch 3 succeed
+    # Batch 2 fails
     # -----------------------------------------
 
     assert len(result) == 2
 
-    assert result[0].id == (
-        "batch-1-doc-1-chunk-1"
+    assert (
+        result[0].id
+        == "batch-1-doc-1-chunk-1"
     )
 
-    assert result[1].id == (
-        "batch-3-doc-1-chunk-1"
+    assert (
+        result[1].id
+        == "batch-3-doc-1-chunk-1"
     )
+
+
 def test_ingestion_pipeline_ai_can_be_disabled():
 
     from app.config.settings import Settings
@@ -360,24 +390,42 @@ def test_ingestion_pipeline_ai_can_be_disabled():
 
     pipeline = IngestionPipeline()
 
+    # -----------------------------------------
     # Disable AI processing
+    # -----------------------------------------
+
     pipeline.settings = Settings(
         ai_enabled=False
     )
 
+    # -----------------------------------------
     # Mock storage
+    # -----------------------------------------
+
     pipeline.sql_storage.save = (
-        lambda documents: len(documents)
+        lambda documents, embeddings=None:
+        len(documents)
     )
 
     pipeline.vector_storage.save = (
-        lambda documents: len(documents)
+        lambda documents, embeddings=None:
+        len(documents)
     )
+
+    # -----------------------------------------
+    # Run pipeline
+    # -----------------------------------------
 
     result = pipeline.run(documents)
 
     assert len(result) == 1
-    assert result[0].id == "ai-disabled-1-chunk-1"
+
+    assert (
+        result[0].id
+        == "ai-disabled-1-chunk-1"
+    )
+
+
 def test_ingestion_pipeline_ai_failure_continues():
 
     documents = [
@@ -433,11 +481,13 @@ def test_ingestion_pipeline_ai_failure_continues():
     # -----------------------------------------
 
     pipeline.sql_storage.save = (
-        lambda documents: len(documents)
+        lambda documents, embeddings=None:
+        len(documents)
     )
 
     pipeline.vector_storage.save = (
-        lambda documents: len(documents)
+        lambda documents, embeddings=None:
+        len(documents)
     )
 
     # -----------------------------------------
@@ -454,12 +504,81 @@ def test_ingestion_pipeline_ai_failure_continues():
 
     assert len(result) == 2
 
-    assert result[0].id == (
-        "ai-failure-1-chunk-1"
+    assert (
+        result[0].id
+        == "ai-failure-1-chunk-1"
     )
 
-    assert result[1].id == (
-        "ai-failure-2-chunk-1"
+    assert (
+        result[1].id
+        == "ai-failure-2-chunk-1"
     )
 
     assert call_count == 2
+
+
+def test_pipeline_generates_embeddings():
+
+    document = Document(
+        id="embedding-pipeline-1",
+        source="sample.txt",
+        source_type="txt",
+        content="Python is a programming language",
+        metadata={},
+    )
+
+    pipeline = IngestionPipeline()
+
+    # -----------------------------------------
+    # Mock storage
+    # -----------------------------------------
+
+    pipeline.sql_storage.save = (
+        lambda documents, embeddings=None:
+        len(documents)
+    )
+
+    pipeline.vector_storage.save = (
+        lambda documents, embeddings=None:
+        len(documents)
+    )
+
+    # -----------------------------------------
+    # Run pipeline
+    # -----------------------------------------
+
+    result = pipeline.run(
+        [document]
+    )
+
+    # -----------------------------------------
+    # Verify processed documents
+    # -----------------------------------------
+
+    assert len(result) > 0
+
+    # -----------------------------------------
+    # Verify embeddings
+    # -----------------------------------------
+
+    assert (
+        len(pipeline.last_embeddings)
+        == len(result)
+    )
+
+    assert isinstance(
+        pipeline.last_embeddings,
+        list,
+    )
+
+    assert isinstance(
+        pipeline.last_embeddings[0],
+        list,
+    )
+
+    assert (
+        len(
+            pipeline.last_embeddings[0]
+        )
+        == 384
+    )

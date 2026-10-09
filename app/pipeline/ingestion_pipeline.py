@@ -2,6 +2,7 @@ from app.logging.logger import get_logger
 
 from app.ai.ai_processor import AIProcessor
 from app.config.settings import settings
+from app.embeddings.embedding_service import EmbeddingService
 
 from app.processors.parser import DocumentParser
 from app.processors.cleaner import DocumentCleaner
@@ -23,33 +24,44 @@ from app.validation.quality_summary import (
 
 class IngestionPipeline:
     """
-    Main processing pipeline.
+    Main document ingestion and processing pipeline.
 
     Flow:
 
-    Documents
-        ↓
-    Document Validation
-        ↓
-    Valid Documents
-        ↓
-    AI Processing
-        ↓
-    Parser
-        ↓
-    Cleaner
-        ↓
-    Chunker
-        ↓
-    Processed Documents
-        ↓
-    SQL Storage
-        ↓
-    Vector Storage
+        Documents
+            ↓
+        Document Validation
+            ↓
+        AI Processing
+            ↓
+        Parser
+            ↓
+        Cleaner
+            ↓
+        Chunker
+            ↓
+        Embedding Service
+            ↓
+        Embedding Provider
+            ↓
+        SQL Storage
+            ↓
+        Vector Storage
+
+    The embedding provider is selected through
+    the application configuration.
+
+    Current provider:
+        ChromaDB
+
+    Future providers:
+        OpenAI
+        Hugging Face
+        Local Model
 
     Supports:
-    1. Normal processing using run()
-    2. Batch processing using run_batches()
+        1. Normal processing using run()
+        2. Batch processing using run_batches()
     """
 
     def __init__(self):
@@ -94,9 +106,15 @@ class IngestionPipeline:
 
         self.last_ai_results = []
 
-        # Track documents for which AI processing
-        # failed without stopping the pipeline.
         self.last_ai_failures = []
+
+        # -----------------------------------------
+        # Embedding processing
+        # -----------------------------------------
+
+        self.embedding_service = EmbeddingService()
+
+        self.last_embeddings = []
 
         # -----------------------------------------
         # Storage components
@@ -157,12 +175,15 @@ class IngestionPipeline:
         4. Parse
         5. Clean
         6. Chunk
-        7. Store in SQL
-        8. Store in vector database
+        7. Generate embeddings
+        8. Store in SQL
+        9. Store in vector database
 
         AI processing failures are isolated per document.
-        A failure in one AI operation does not stop the
-        remaining documents from being processed.
+
+        Embedding failures are allowed to propagate because
+        vector storage cannot safely proceed without embeddings
+        when an explicit embedding provider is being used.
         """
 
         # -----------------------------------------
@@ -188,6 +209,8 @@ class IngestionPipeline:
         self.last_ai_results = []
 
         self.last_ai_failures = []
+
+        self.last_embeddings = []
 
         self.last_sql_storage_count = 0
 
@@ -326,8 +349,8 @@ class IngestionPipeline:
                     )
 
                     # Continue processing the next
-                    # document instead of failing the
-                    # entire pipeline.
+                    # document instead of failing
+                    # the entire pipeline.
                     continue
 
             self.last_ai_results = (
@@ -453,7 +476,37 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 7. Vector Storage
+        # 7. Generate embeddings
+        # -----------------------------------------
+
+        self.logger.info(
+            "Embedding generation started"
+        )
+
+        embeddings = []
+
+        if processed_documents:
+
+            embedding_texts = [
+                document.content
+                for document in processed_documents
+            ]
+
+            embeddings = (
+                self.embedding_service.embed(
+                    embedding_texts
+                )
+            )
+
+        self.last_embeddings = embeddings
+
+        self.logger.info(
+            "Generated %d embedding(s)",
+            len(embeddings),
+        )
+
+        # -----------------------------------------
+        # 8. Vector Storage
         # -----------------------------------------
 
         self.logger.info(
@@ -462,7 +515,8 @@ class IngestionPipeline:
 
         self.last_vector_storage_count = (
             self.vector_storage.save(
-                processed_documents
+                processed_documents,
+                embeddings=embeddings,
             )
         )
 
@@ -472,7 +526,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 8. Pipeline completed
+        # 9. Pipeline completed
         # -----------------------------------------
 
         self.logger.info(
@@ -480,7 +534,7 @@ class IngestionPipeline:
         )
 
         # -----------------------------------------
-        # 9. Return processed documents
+        # 10. Return processed documents
         # -----------------------------------------
 
         return processed_documents
@@ -499,9 +553,27 @@ class IngestionPipeline:
         Each batch is processed independently.
 
         If a batch fails:
-        - The error is logged.
-        - The failed batch is skipped.
-        - Processing continues with the next batch.
+            - The error is logged.
+            - The failed batch is skipped.
+            - Processing continues with the next batch.
+
+        Each successful batch performs:
+
+            Validation
+                ↓
+            AI Processing
+                ↓
+            Parsing
+                ↓
+            Cleaning
+                ↓
+            Chunking
+                ↓
+            Embedding
+                ↓
+            SQL Storage
+                ↓
+            Vector Storage
 
         Returns all successfully processed
         document chunks.

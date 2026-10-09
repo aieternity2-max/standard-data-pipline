@@ -3,27 +3,51 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # -----------------------------------------
     # Application
+    # -----------------------------------------
+
     app_name: str = "Standard Data Pipeline"
     environment: str = "development"
     log_level: str = "INFO"
 
+    # -----------------------------------------
     # Pipeline
+    # -----------------------------------------
+
     batch_size: int = Field(
         default=1000,
         gt=0,
     )
 
+    # -----------------------------------------
     # ChromaDB
+    # -----------------------------------------
+
     chroma_path: str = "data/chroma"
     chroma_collection: str = "documents"
 
+    # -----------------------------------------
     # AI
+    # -----------------------------------------
+
     ai_enabled: bool = True
     embedding_provider: str = "chromadb"
 
+    # -----------------------------------------
+    # LLM
+    # -----------------------------------------
 
+    llm_provider: str = "mock"
+
+    openai_api_key: str | None = None
+
+    openai_model: str = "gpt-6-luna"
+
+    # -----------------------------------------
     # MySQL
+    # -----------------------------------------
+
     mysql_host: str = "localhost"
     mysql_port: int = 3306
     mysql_user: str | None = None
@@ -49,6 +73,10 @@ class Settings(BaseSettings):
         default=1800,
         gt=0,
     )
+
+    # -----------------------------------------
+    # Pydantic Settings
+    # -----------------------------------------
 
     model_config = SettingsConfigDict(
         env_file=".env",

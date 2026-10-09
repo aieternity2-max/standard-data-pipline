@@ -58,17 +58,6 @@ def test_embedding_service_rejects_empty_text():
         )
 
 
-def test_embedding_service_requires_provider_for_embedding():
-
-    service = EmbeddingService()
-
-    with pytest.raises(RuntimeError):
-
-        service.embed(
-            ["Hello world"]
-        )
-
-
 def test_embedding_service_rejects_invalid_embedding_input():
 
     service = EmbeddingService()
@@ -109,6 +98,29 @@ def test_embedding_service_uses_provider():
         [1.0, 2.0, 3.0],
         [1.0, 2.0, 3.0],
     ]
+
+
+def test_embedding_service_uses_configured_provider():
+
+    service = EmbeddingService()
+
+    result = service.embed(
+        ["Hello world"]
+    )
+
+    assert isinstance(
+        result,
+        list,
+    )
+
+    assert len(result) == 1
+
+    assert isinstance(
+        result[0],
+        list,
+    )
+
+    assert len(result[0]) == 384
 
 
 def test_embedding_provider_is_abstract():

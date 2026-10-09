@@ -1,4 +1,8 @@
+from app.config.settings import settings
 from app.embeddings.base import EmbeddingProvider
+from app.embeddings.provider_factory import (
+    EmbeddingProviderFactory,
+)
 
 
 class EmbeddingService:
@@ -8,8 +12,8 @@ class EmbeddingService:
     The service validates and prepares text before it is
     passed to an embedding provider.
 
-    An actual embedding provider can be introduced later
-    without changing the service interface.
+    The provider is selected from application configuration
+    when one is not explicitly supplied.
     """
 
     def __init__(
@@ -24,12 +28,23 @@ class EmbeddingService:
         provider:
             Optional embedding provider.
 
-            The provider is intentionally optional because
-            ChromaDB currently handles embedding generation
-            internally.
+            If provided, dependency injection is used.
+
+            If not provided, the provider is created from
+            the EMBEDDING_PROVIDER configuration.
         """
 
-        self.provider = provider
+        if provider is not None:
+
+            self.provider = provider
+
+        else:
+
+            self.provider = (
+                EmbeddingProviderFactory.create(
+                    settings.embedding_provider
+                )
+            )
 
     def prepare_text(
         self,
@@ -37,16 +52,6 @@ class EmbeddingService:
     ) -> str:
         """
         Validate and prepare text before embedding.
-
-        Parameters
-        ----------
-        text:
-            Text that will be embedded.
-
-        Returns
-        -------
-        str
-            Clean text ready for embedding.
         """
 
         if not isinstance(
@@ -72,16 +77,6 @@ class EmbeddingService:
     ) -> list[list[float]]:
         """
         Generate embeddings using the configured provider.
-
-        Parameters
-        ----------
-        texts:
-            Texts to embed.
-
-        Returns
-        -------
-        list[list[float]]
-            Generated embedding vectors.
         """
 
         if not isinstance(
@@ -99,11 +94,6 @@ class EmbeddingService:
             self.prepare_text(text)
             for text in texts
         ]
-
-        if self.provider is None:
-            raise RuntimeError(
-                "No embedding provider is configured"
-            )
 
         return self.provider.embed(
             prepared_texts
