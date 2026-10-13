@@ -1,0 +1,58 @@
+﻿"""Main entry point for the InsightSphere Streamlit application."""
+
+import streamlit as st
+
+from app.ui.styles import apply_global_styles
+from app.ui.components.header import render_header
+from app.ui.components.sidebar import render_sidebar
+from app.ui.pages.overview import render_overview
+from app.ui.pages.upload_data import render_upload_data
+from app.ui.pages.explore_data import render_explore_data
+from app.ui.pages.search import render_search
+from app.ui.pages.dashboards import render_dashboards
+
+
+st.set_page_config(
+    page_title="InsightSphere",
+    page_icon="ðŸ”·",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+
+def main() -> None:
+    """Render the InsightSphere application."""
+
+    apply_global_styles()
+
+    selected_page = render_sidebar()
+
+    render_header()
+
+    if selected_page == "Overview":
+        render_overview()
+
+    elif selected_page == "Upload Data":
+        render_upload_data()
+
+    elif selected_page == "Explore Data":
+        render_explore_data()
+
+    elif selected_page == "Search":
+        render_search()
+
+    elif selected_page == "Dashboards":
+        render_dashboards()
+
+    else:
+        st.title(selected_page)
+
+        st.info(
+            f"The {selected_page} section is being developed. "
+            "Overview, Upload Data, Explore Data, and Search "
+            "are available."
+        )
+
+
+if __name__ == "__main__":
+    main()
