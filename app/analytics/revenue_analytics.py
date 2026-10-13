@@ -1,4 +1,4 @@
-﻿"""Revenue and payment performance analytics."""
+"""Revenue and payment performance analytics."""
 
 from typing import Any
 
@@ -110,6 +110,9 @@ class RevenueAnalytics:
         pending = transactions[
             transactions["payment_status"] == "pending"
         ]
+        refunded = transactions[
+            transactions["payment_status"] == "refunded"
+        ]
 
         revenue_trend = (
             completed.assign(
@@ -152,6 +155,10 @@ class RevenueAnalytics:
             "pending_transaction_value": round(
                 float(pending["total_amount"].sum()), 2
             ),
+            "refunded_transaction_count": int(len(refunded)),
+            "refunded_transaction_value": round(
+                float(refunded["total_amount"].sum()), 2
+            ),
             "payment_status_breakdown": status_breakdown,
             "revenue_trend": trend_records,
         }
@@ -168,6 +175,8 @@ class RevenueAnalytics:
             "failed_transaction_value": 0.00,
             "pending_transaction_count": 0,
             "pending_transaction_value": 0.00,
+            "refunded_transaction_count": 0,
+            "refunded_transaction_value": 0.00,
             "payment_status_breakdown": [],
             "revenue_trend": [],
         }

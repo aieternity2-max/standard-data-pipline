@@ -73,10 +73,12 @@ class PaymentAnalytics:
         completed_count = int(status_counts.get("completed", 0))
         failed_count = int(status_counts.get("failed", 0))
         pending_count = int(status_counts.get("pending", 0))
+        refunded_count = int(status_counts.get("refunded", 0))
 
         completed_value = float(status_values.get("completed", 0.0))
         failed_value = float(status_values.get("failed", 0.0))
         pending_value = float(status_values.get("pending", 0.0))
+        refunded_value = float(status_values.get("refunded", 0.0))
 
         def percentage(count: int) -> float:
             return round(count / total_transactions * 100, 2)
@@ -107,14 +109,17 @@ class PaymentAnalytics:
             "completed_transactions": completed_count,
             "failed_transactions": failed_count,
             "pending_transactions": pending_count,
+            "refunded_transactions": refunded_count,
             "completion_rate_pct": percentage(completed_count),
             "failure_rate_pct": percentage(failed_count),
             "pending_rate_pct": percentage(pending_count),
+            "refunded_rate_pct": percentage(refunded_count),
             "completed_transaction_value": round(completed_value, 2),
             "failed_transaction_value": round(failed_value, 2),
             "pending_transaction_value": round(pending_value, 2),
+            "refunded_transaction_value": round(refunded_value, 2),
             "potentially_affected_payment_value": round(
-                failed_value + pending_value,
+                failed_value + pending_value + refunded_value,
                 2,
             ),
             "daily_trends": daily_trends,

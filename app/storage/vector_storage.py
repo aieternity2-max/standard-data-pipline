@@ -261,3 +261,29 @@ class VectorStorage:
             query_texts=[query],
             n_results=n_results,
         )
+
+    def delete(
+        self,
+        ids: list[str] | str,
+    ) -> int:
+        """
+        Delete document(s) by ID from ChromaDB collection.
+
+        Parameters
+        ----------
+        ids:
+            Single document ID string or list of document IDs to delete.
+
+        Returns
+        -------
+        int
+            Number of document IDs requested for deletion.
+        """
+        if isinstance(ids, str):
+            ids = [ids]
+
+        if not ids:
+            return 0
+
+        self.collection.delete(ids=ids)
+        return len(ids)

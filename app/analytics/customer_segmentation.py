@@ -149,22 +149,28 @@ class CustomerSegmentation:
             .fillna(0.0)
         )
 
-        if as_of_date is None:
-            reference_date = pd.Timestamp.now().normalize()
-        else:
-            reference_date = pd.Timestamp(as_of_date).normalize()
-
         last_dates = pd.to_datetime(
             result["last_completed_transaction"],
             errors="coerce",
         )
 
-        future_dates = last_dates.notna() & (last_dates > reference_date)
-
-        if future_dates.any():
-            raise ValueError(
-                "Reference date must not precede a completed transaction."
+        if as_of_date is None:
+            now_normalized = pd.Timestamp.now().normalize()
+            max_last_date = last_dates.dt.normalize().max()
+            reference_date = (
+                max(now_normalized, max_last_date)
+                if pd.notna(max_last_date)
+                else now_normalized
             )
+        else:
+            reference_date = pd.Timestamp(as_of_date).normalize()
+            future_dates = last_dates.notna() & (
+                last_dates.dt.normalize() > reference_date
+            )
+            if future_dates.any():
+                raise ValueError(
+                    "Reference date must not precede a completed transaction."
+                )
 
         result["recency_days"] = (
             reference_date - last_dates.dt.normalize()

@@ -30,6 +30,9 @@ class TransactionDataValidator:
         "completed",
         "failed",
         "pending",
+        "refunded",
+        "cancelled",
+        "canceled",
     }
 
     def validate(
