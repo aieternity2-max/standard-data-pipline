@@ -6,7 +6,7 @@
 [![Vite](https://img.shields.io/badge/Vite-8.3-646CFF.svg)](https://vitejs.dev/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_Store-orange.svg)](https://www.trychroma.com/)
 [![MySQL](https://img.shields.io/badge/MySQL-Relational_Store-00758F.svg)](https://www.mysql.com/)
-[![Tests](https://img.shields.io/badge/Tests-223_Passed-success.svg)](https://docs.pytest.org/)
+[![Tests](https://img.shields.io/badge/Tests-245_Passed-success.svg)](https://docs.pytest.org/)
 
 An enterprise-ready, modular data ingestion and retrieval pipeline designed to seamlessly parse, clean, chunk, embed, and index heterogeneous data sources (unstructured documents and structured datasets) into **ChromaDB** for semantic vector search and **MySQL** for relational persistence.
 
@@ -228,7 +228,7 @@ standard-data-pipline/
 │
 ├── data/                             # Data directory (ChromaDB persistence storage)
 │   └── chroma/
-├── tests/                            # Comprehensive Pytest test suite (223+ tests)
+├── tests/                            # Comprehensive Pytest test suite (245 tests)
 ├── .env.example                      # Sample environment variables template
 ├── requirements.txt                  # Python dependencies
 ├── pyproject.toml                    # Python project packaging metadata
@@ -401,7 +401,7 @@ FastAPI automatically generates interactive Swagger documentation at **`http://1
 
 ## Testing
 
-The project maintains test coverage with **223 unit and integration tests** verifying loaders, chunkers, cleaners, embedding services, vector storage, and API routes.
+The project maintains test coverage with **245 unit and integration tests** verifying loaders, chunkers, cleaners, embedding services, vector storage, and API routes.
 
 ### Run Python Tests
 ```bash

@@ -1,91 +1,38 @@
+import pytest
+
 from app.embeddings.base import EmbeddingProvider
-from app.embeddings.chromadb_provider import (
-    ChromaDBEmbeddingProvider,
-)
+from app.embeddings.chromadb_provider import ChromaDBEmbeddingProvider
 
 
-class EmbeddingProviderFactory:
-    """
-    Factory for selecting embedding providers.
+def test_chromadb_provider_instance():
+    provider = ChromaDBEmbeddingProvider()
+    assert isinstance(provider, EmbeddingProvider)
+    assert isinstance(provider, ChromaDBEmbeddingProvider)
 
-    ChromaDB is currently implemented.
 
-    External providers such as OpenAI,
-    Hugging Face, and local models remain
-    extension points for future implementation.
-    """
+def test_chromadb_provider_empty_input():
+    provider = ChromaDBEmbeddingProvider()
+    assert provider.embed([]) == []
 
-    SUPPORTED_PROVIDERS = {
-        "chromadb",
-        "openai",
-        "huggingface",
-        "local",
-    }
 
-    @classmethod
-    def validate_provider(
-        cls,
-        provider_name: str,
-    ) -> str:
-        """
-        Validate and normalize an embedding provider name.
-        """
+def test_chromadb_provider_rejects_non_list():
+    provider = ChromaDBEmbeddingProvider()
+    with pytest.raises(TypeError, match="texts must be a list"):
+        provider.embed("hello world")
 
-        if not isinstance(
-            provider_name,
-            str,
-        ):
-            raise TypeError(
-                "provider_name must be a string"
-            )
 
-        provider_name = (
-            provider_name.strip().lower()
-        )
+def test_chromadb_provider_rejects_non_string_elements():
+    provider = ChromaDBEmbeddingProvider()
+    with pytest.raises(TypeError, match="all texts must be strings"):
+        provider.embed(["valid text", 123])
 
-        if not provider_name:
-            raise ValueError(
-                "provider_name cannot be empty"
-            )
 
-        if (
-            provider_name
-            not in cls.SUPPORTED_PROVIDERS
-        ):
-            raise ValueError(
-                f"Unsupported embedding provider: "
-                f"{provider_name}"
-            )
+def test_chromadb_provider_generates_embeddings():
+    provider = ChromaDBEmbeddingProvider()
+    result = provider.embed(["Hello world", "Data pipeline"])
 
-        return provider_name
-
-    @classmethod
-    def create(
-        cls,
-        provider_name: str,
-    ) -> EmbeddingProvider:
-        """
-        Create the configured embedding provider.
-
-        Currently supported:
-        - chromadb
-
-        Future providers:
-        - openai
-        - huggingface
-        - local
-        """
-
-        provider_name = (
-            cls.validate_provider(
-                provider_name
-            )
-        )
-
-        if provider_name == "chromadb":
-            return ChromaDBEmbeddingProvider()
-
-        raise NotImplementedError(
-            f"Embedding provider '{provider_name}' "
-            f"is registered but not implemented yet"
-        )
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert isinstance(result[0], list)
+    assert len(result[0]) == 384
+    assert isinstance(result[0][0], float)
